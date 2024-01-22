@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QR Code Scanner</title>
+  <style>
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+      background-color: #333;
+      color: #fff;
+      font-family: 'Arial', sans-serif;
+    }
+    #opening-page, #scanner-page {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+    }
+    #opening-page {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    h1 {
+      font-size: 36px;
+      margin-bottom: 20px;
+    }
+    #start-button {
+      padding: 10px 20px;
+      font-size: 18px;
+      cursor: pointer;
+      background-color: #008000;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      transition: background-color 0.3s ease-in-out;
+    }
+    #start-button:hover {
+      background-color: #006400;
+    }
+    video {
+      max-width: 100%;
+      max-height: 100%;
+      border: 2px solid #fff;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+      transition: transform 0.2s ease-in-out;
+    }
+    .overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.7);
+      color: #fff;
+      font-size: 24px;
+      opacity: 0.8;
+    }
+  </style>
+</head>
+<body>
+
+<div id="opening-page">
+  <h1>Welcome to QR Code Scanner</h1>
+  <button id="start-button" onclick="startScanner()">Start Scanner</button>
+</div>
+
+<div id="scanner-page">
+  <video id="video" playsinline autoplay></video>
+  <div class="overlay">Scanning for QR codes...</div>
+</div>
+
+<script>
+  function startScanner() {
+    document.getElementById('opening-page').style.display = 'none';
+    document.getElementById('scanner-page').style.display = 'flex';
+
+    // Request access to the camera
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+      .then(function (stream) {
+        // Create a video element and set its source to the camera stream
+        const video = document.getElementById('video');
+        video.srcObject = stream;
+
+        // Load the jsQR library
+        return import('https://cdn.jsdelivr.net/npm/jsqr@1.0.1/dist/jsQR.mjs');
+      })
+      .then(function (jsQR) {
+        // Function to continuously scan for QR codes
+        function scanQRCode() {
+          const video = document.getElementById('video');
+          const overlay = document.querySelector('.overlay');
+          const canvas = document.createElement('canvas');
+          const context = canvas.getContext('2d');
+
+          // Set canvas dimensions to match video
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+
+          // Draw current video frame onto the canvas
+          context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+          // Get image data from the canvas
+          const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+
+          // Use jsQR to attempt QR code decoding
+          const code = jsQR.default(imageData.data, imageData.width, imageData.height);
+
+          // If a QR code is detected, display its content
+          if (code) {
+            overlay.innerText = 'QR Code Detected: ' + code.data;
+          } else {
+            overlay.innerText = 'Scanning for QR codes...';
+          }
+
+          // Repeat the scanning process
+          requestAnimationFrame(scanQRCode);
+        }
+
+        // Start scanning for QR codes
+        scanQRCode();
+      })
+      .catch(function (error) {
+        console.error('Error accessing camera:', error);
+      });
+  }
+</script>
+
+</body>
+</html>
